@@ -32,7 +32,7 @@ public:
 	static void SetTriggerPoints(double startangle, double endangle, double radius, BOOL bothways);
 	static int SetTriggerPoint(BYTE TriggerAxis, long position);
 	static int SetTriggerEvent(BYTE TriggerAxis, short bpNo);
-	int C843::CheckPositions(void);
+	static int CheckPositions(void);
 
 protected:
 	int GetEndStopPosition();
@@ -118,7 +118,7 @@ static float Source_Y;
 	static double vProfileStartPhi;
 
 	void Move(int axis, long position);
-	static void CreateProfile(double radius, double phi_start_angle, double start_angle, double travel_angle, double exposure_time);
+	static void CreateProfile(double radius, double phi_start_angle, double start_angle, double travel_angle, double speed);
 	static void RunProfile(std::vector<std::string> vXYlist, std::vector<std::string> vPhilist,int vXYProfileSize,int vPhiProfileSize);
 	//static void RunProfile(void);
 	

@@ -63,6 +63,7 @@ IMPLEMENT_DYNCREATE(CMuCatView, CScrollView)
 		ON_COMMAND(ID_FILE_PRINT_DIRECT, CScrollView::OnFilePrint)
 		ON_COMMAND(ID_FILE_PRINT_PREVIEW, CScrollView::OnFilePrintPreview)
 		ON_COMMAND(ID_LOCATE_CAM_SOURCE, &CMuCatView::OnLocateCamSource)
+		ON_COMMAND(ID_TDIFIX, &CMuCatView::OnButtonTDIFIX)
 	END_MESSAGE_MAP()
 
 	int CMuCatView::buffers_init = 0;
@@ -90,6 +91,7 @@ IMPLEMENT_DYNCREATE(CMuCatView, CScrollView)
 		, IsPMLValid(false)
 		, sharp_x(0)
 		, sharp_y(0)
+		, m_Sharpness(0)
 		{
 		// TODO: add construction code here
 		if (!m_Initialised)
@@ -484,7 +486,7 @@ IMPLEMENT_DYNCREATE(CMuCatView, CScrollView)
 
 	void CMuCatView::OnInitFocus() 
 		{
-		unsigned int Bin,ii;
+		unsigned int Bin,ii,x,y;
 		CMuCatDoc* pDoc = GetDocument();
 		Bin = pDoc->GetBin();
 		m_XSize = (pDoc->GetNumCCDRows()-40)/Bin;
@@ -505,7 +507,7 @@ IMPLEMENT_DYNCREATE(CMuCatView, CScrollView)
 					dark[ii] = m_CCDBuffer[ii];
 				long elepos = pDoc->GetElevation();
 				pDoc->GetElevator()->Move(C843::mmToElevation(280));	//move stage down out of the way
-				pDoc->GetElevator()->WaitForStop();
+				pDoc->GetElevator()->WaitForStop(); 
 			
 				Camera.StillImage((float)(pDoc->GetStillExposure()*1000),m_CCDPixel, m_XSize, m_YSize, pDoc->GetBin(),pixel_mag_lookup,false);
 				for(ii=0;ii<light.size(); ii++)
@@ -518,7 +520,7 @@ IMPLEMENT_DYNCREATE(CMuCatView, CScrollView)
 				for (ii=0;ii<dark.size();ii++)
 					{
 					lightfixed[ii]=light[ii]-dark[ii];
-					}
+					};
 				light.resize(0);	//no need for unfixed light image data now
 				
 				m_valid_backgrounds = true;
@@ -526,6 +528,15 @@ IMPLEMENT_DYNCREATE(CMuCatView, CScrollView)
 			}
 				
 				Camera.StillImage((float)(pDoc->GetStillExposure()*1000),m_CCDPixel, m_XSize, m_YSize, pDoc->GetBin(),pixel_mag_lookup,false);
+				for(y = 0; y<50; ++y)
+					{
+					for (x = 0; x<m_XSize; ++x)
+						{
+						m_CCDPixel[y][x] = 2000;
+						m_CCDPixel[m_YSize-1-y][x] = 2000;
+						}
+					}
+
 				for(ii=0;ii<data.size(); ii++)
 					data[ii] = m_CCDBuffer[ii];
 
@@ -556,9 +567,9 @@ IMPLEMENT_DYNCREATE(CMuCatView, CScrollView)
 		valarray<double> image(data.size());
 		for (ii=0;ii<dark.size();ii++)
 			{
-			image[ii]= (datafixed[ii] / lightfixed[ii])*30000;
-			if (image[ii] > 60000)
-				image[ii] = 60000;
+			image[ii]= (datafixed[ii] / lightfixed[ii])*60000;
+			if (image[ii] > 65000)
+				image[ii] = 65000;
 			if (image[ii] < 0)
 				image[ii] = 0;
 			}
@@ -1619,6 +1630,7 @@ IMPLEMENT_DYNCREATE(CMuCatView, CScrollView)
 		m_MeasuredWidth = Width;
 		pDoc->WriteStatus(9, "Sharp = %6.2f,   Centre = %6.1f",Sharpness, Centre);
 		m_Are_doing_sharpness = true;
+		m_Sharpness = Sharpness;
 		Invalidate();
 		UpdateWindow();
 
@@ -1751,19 +1763,19 @@ IMPLEMENT_DYNCREATE(CMuCatView, CScrollView)
 
 			/*pDoc->GetElevator()->Move(h);
 			pDoc->GetElevator()->WaitForStop();*/
-			pDoc->WriteStatus(0,"Moving Azimuth, %d   %d   %d",x,y,phi);
+			pDoc->WriteStatus(0,"Moving Azimuth, %f   %f   %f",x,y,phi);
 			pDoc->GetSlide()->Move((long)(x*2000.0));
 			pDoc->GetSlide()->WaitForStop();
 			
-			pDoc->WriteStatus(0,"Moving Magnification, %d   %d   %d",x,y,phi);
+			pDoc->WriteStatus(0,"Moving Magnification, %f   %f   %f",x,y,phi);
 			pDoc->GetMagSlide()->Move((long)(y*2000.0));
 			pDoc->GetMagSlide()->WaitForStop();
 
-			pDoc->WriteStatus(0,"Rotating Rod, %d   %d   %d",x,y,phi);
+			pDoc->WriteStatus(0,"Rotating Rod, %f   %f   %f",x,y,phi);
 			pDoc->GetTurntable()->Move((long)(phi*1000.0));
 			pDoc->GetTurntable()->WaitForStop();
 
-			pDoc->WriteStatus(0,"Capturing Image, %d   %d   %d",x,y,phi);
+			pDoc->WriteStatus(0,"Capturing Image, %f   %f   %f",x,y,phi);
 			m_IsDark = FALSE;
 			OnStill();
 			GetParent()->GetParent()->UpdateWindow();
@@ -1928,3 +1940,58 @@ IMPLEMENT_DYNCREATE(CMuCatView, CScrollView)
 		}
 
 	
+
+
+	void CMuCatView::OnButtonTDIFIX(void)
+		{
+		CMuCatDoc* pDoc = GetDocument();
+		ASSERT_VALID(pDoc);
+
+		double currentSpeed, lowerSpeed, higherSpeed;
+		double fc,fl,fh;
+
+		currentSpeed = pDoc->GetHeader()->current;
+		lowerSpeed = currentSpeed - (currentSpeed * 0.01);
+		higherSpeed = currentSpeed + (currentSpeed * 0.01);
+		::MessageBox(NULL, "Make sure there is a focus rod in the system and Xrays are ON", "Caution", MB_OK|MB_ICONWARNING);
+
+		OnScan();
+		OnButtonsharpness();
+		fc = m_Sharpness;
+
+		pDoc->GetHeader()->current = lowerSpeed;
+		OnScan();
+		OnButtonsharpness();
+		fl = m_Sharpness;
+
+		OnScan();
+		OnButtonsharpness();
+		pDoc->GetHeader()->current = higherSpeed;
+		fh = m_Sharpness;
+
+		//fit parabola to the known sharpnesses and speeds, find the best sharpess
+		double D = (currentSpeed-lowerSpeed)*(currentSpeed-higherSpeed)*(lowerSpeed-higherSpeed);
+		double A = (higherSpeed * (fl - fc) + lowerSpeed * (fc - fh) + currentSpeed * (fh - fl)) / D;
+		double B = (higherSpeed*higherSpeed * (fc - fl) + lowerSpeed*lowerSpeed * (fh - fc) + currentSpeed*currentSpeed * (fl - fh)) / D;
+		double C = (lowerSpeed * higherSpeed * (lowerSpeed - higherSpeed) * fc + higherSpeed * currentSpeed * (higherSpeed - currentSpeed) * fl \
+			+ currentSpeed * lowerSpeed * (currentSpeed - lowerSpeed) * fh) / D;
+
+		double vertex_speed = -B / (2*A);
+		double vertex_sharpness = C - B*B / (4*A);
+
+		if (vertex_sharpness > fc)
+			{
+			pDoc->GetHeader()->current = currentSpeed;
+			::MessageBox(NULL, "Failed to find a better result automatically.", "ERROR", MB_OK|MB_ICONWARNING);
+			}
+		else if ((vertex_speed < lowerSpeed || vertex_speed > higherSpeed) && vertex_sharpness < fc)
+			{
+			pDoc->GetHeader()->current = vertex_speed;
+			::MessageBox(NULL, "Found good sharpness, but speed might be a bit wrong. Check manually", "Warning", MB_OK|MB_ICONWARNING);
+			}
+		else if (vertex_sharpness < fc)
+			{
+			pDoc->GetHeader()->current = vertex_speed;
+			::MessageBox(NULL, "Found a better result", "WooYay!", MB_OK|MB_ICONWARNING);
+			}
+		}

@@ -418,10 +418,20 @@ void SI1100::StillImage(float exposure, unsigned long ** image , int XSize, int 
 	error = PrepareAcquisition(SerialReadLength*2,NumRows,TDIBuffer,READ_NORMAL,DI_4QUAD,0,NULL);
 	dma_complete = true;
 	error = ImageExpose();
-
+	CTime TimeOut;
+	CTime TimeNow;
+	TimeNow = CTime::GetCurrentTime();
+	
 	do 
 		{
+		TimeOut = CTime::GetCurrentTime();
+		
 		error = ReadoutStatus(&pixels_read,&pixels_deinterlaced,&percent_readout);
+		if (TimeOut > TimeNow + CTimeSpan(0,0,1,30))
+			{
+			EndAcquisition(true);	//don't leave camera hanging for a trigger if we fail to readout because stages freeze
+			break;
+			}
 		} while (percent_readout < 100);				
 		error = EndAcquisition(false);
 		if (error)

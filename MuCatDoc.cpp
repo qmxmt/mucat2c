@@ -49,8 +49,10 @@ END_MESSAGE_MAP()
 
  bool CMuCatDoc::InvalidDueToGeometryChange = false;
  bool CMuCatDoc::FirstOnPosCall = false;
-CMuCatDoc::CMuCatDoc():m_Turntable(2,ROTATIONAL_PD),m_Slide(0,LINEAR_PD),
-	m_Elevator(3,LINEAR_PD),m_MagnificationSlide(1,LINEAR_GEARED)
+ CMuCatDoc::CMuCatDoc():m_Turntable(2,ROTATIONAL_PD),m_Slide(0,LINEAR_PD),
+ 	m_Elevator(3,LINEAR_PD),m_MagnificationSlide(1,LINEAR_GEARED)
+//CMuCatDoc::CMuCatDoc():m_Turntable(2,ROTATIONAL_PD),m_Slide(0,LINEAR_PD),
+//	m_Elevator(3,LINEAR_PD),m_MagnificationSlide(1,LINEAR_PD)
 	, m_SourceToCamera(0)
 	, m_TDIDelay(0)
 	, m_Azimuth(0)

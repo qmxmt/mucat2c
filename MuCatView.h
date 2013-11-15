@@ -173,6 +173,8 @@ public:
 	float Sharpness;
 	void RecordWaitPause(char *FileName, CFile *DataFile, CFileDialog *FD);
 	void IncrementRotationProfile(double currentposition, double ThetaStep);
+	void OnButtonTDIFIX(void);
+	float m_Sharpness;
 };
 
 #ifndef _DEBUG  // debug version in MuCatView.cpp

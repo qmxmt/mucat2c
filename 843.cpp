@@ -479,30 +479,92 @@ void C843::set_triggered_event(BYTE AxisIOpin, BYTE TriggerAxis, BYTE bit, BYTE 
 
 int C843::CheckPositions(void)
 	{
-#define limiter 5000
+	#define limiter 300000
+	vector<int> first_time, second_time, xpos, ypos;
+	first_time.reserve(limiter);
+	second_time.reserve(limiter);
+	xpos.reserve(limiter);
+	ypos.reserve(limiter);
 
-	long first_time[limiter], second_time[limiter], xpos[limiter], ypos[limiter], counter;
-	for (counter=0;counter<limiter;counter++)
+	int counter = 0;
+	int recorded = 0;
+	 int tmp;
+
+	BOOL bIsMoving = TRUE;
+		while(bIsMoving) // wait for end of motion
 		{
-		getQMC(GET_TIME, 0, &first_time[counter]);
-		getQMC(GET_ACTUAL_POSITION, 0, &xpos[counter]);
-		getQMC(GET_ACTUAL_POSITION, 1, &ypos[counter]);
-		getQMC(GET_TIME, 0, &second_time[counter]);
+			C843_IsMoving(BoardHandle, szBAxes, bFlags);
+			bIsMoving = FALSE;
+			for (axis = 0; axis < nrBAxes; axis++)
+			{
+				bIsMoving |= bFlags[axis];
+			}
+			C843_GetQMC(BoardHandle,GET_TIME, 0, &tmp);
+			first_time.push_back(tmp);
+			C843_GetQMC(BoardHandle,GET_ACTUAL_POSITION, 0, &tmp);
+			xpos.push_back(tmp);
+			C843_GetQMC(BoardHandle,GET_ACTUAL_POSITION, 1, &tmp);
+			ypos.push_back(tmp);
+			C843_GetQMC(BoardHandle,GET_TIME, 0, &tmp);
+			second_time.push_back(tmp);
+			counter++;
+			recorded++;
+			//Sleep(100);
 		}
-	for (counter=0;counter<limiter;counter++)
+
+
+
+/*	for (counter=0;counter<limiter;counter++)
 		{
-		printf("\nTime = %d", first_time[counter]);
-		printf("\nXPOS = %d", xpos[counter]);
-		printf("\nYPOS = %d", ypos[counter]);
-		printf("\nTime = %d", first_time[counter]);
-		printf("\n");
+		
+			C843_GetQMC(BoardHandle,GET_TIME, 0, &first_time[counter]);
+			C843_GetQMC(BoardHandle,GET_ACTUAL_POSITION, 0, &xpos[counter]);
+			C843_GetQMC(BoardHandle,GET_ACTUAL_POSITION, 1, &ypos[counter]);
+			C843_GetQMC(BoardHandle,GET_TIME, 0, &second_time[counter]);
+		}*/	
+
+		ofstream output("positions.csv",ofstream::out | ofstream::trunc);
+		//output << "xP" << "xI" << "xD" << endl;
+		//output <<xp<<","<<xi<<","<<xd<<endl;
+		//output << "yP" << "yI" << "yD" << endl;
+		//output <<yp<<","<<yi<<","<<yd<<endl;
+		output << "\nTime1,XPOS,YPOS,Timme2"<<endl;
+
+		TRACE("\nTime1,XPOS,YPOS,Timme2");
+	for (counter=0;counter<recorded;counter++)
+		{
+		if(first_time[counter] == second_time[counter])
+			{
+		output << first_time[counter]<<","<< xpos[counter]<< ","<< ypos[counter]<< ","<<second_time[counter] <<endl;
+			}
+		
 		}
-	return 1;
+	output.close();
+return 1;
+//#define limiter 5000
+//
+//	long first_time[limiter], second_time[limiter], xpos[limiter], ypos[limiter], counter;
+//	for (counter=0;counter<limiter;counter++)
+//		{
+//		getQMC(GET_TIME, 0, &first_time[counter]);
+//		getQMC(GET_ACTUAL_POSITION, 0, &xpos[counter]);
+//		getQMC(GET_ACTUAL_POSITION, 1, &ypos[counter]);
+//		getQMC(GET_TIME, 0, &second_time[counter]);
+//		}
+//	for (counter=0;counter<limiter;counter++)
+//		{
+//		printf("\nTime = %d", first_time[counter]);
+//		printf("\nXPOS = %d", xpos[counter]);
+//		printf("\nYPOS = %d", ypos[counter]);
+//		printf("\nTime = %d", first_time[counter]);
+//		printf("\n");
+//		}
+//	return 1;
 
 	}
 
 
-void C843::CreateProfile(double radius, double phi_start_angle, double start_angle, double travel_angle, double exposure_time)
+void C843::CreateProfile(double radius, double phi_start_angle, double start_angle, double travel_angle, double speed)
 	{
 
 	//Creates a clocwise profile dataset, cwXYList & cwPhilist; also creates the anti-clockwise datasets acwXYList & acwPhilist
@@ -558,7 +620,7 @@ void C843::CreateProfile(double radius, double phi_start_angle, double start_ang
 	double  midpoint_xy[2] = {C843::Source_X,C843::Source_Y};//define the midpoint of the XY profile
 	mwArray center_xy(1,2,mxDOUBLE_CLASS);		
 	center_xy.SetData(midpoint_xy,2);
-	mwArray omega_xy((double) exposure_time);
+	mwArray omega_xy((double) speed);
 	mwArray XGCSLines,YGCSLines,PhiGCSLines;				//somewhere to put the DLL output...
 	int nargout = 3;										//Number of arguments the DLL can change.
 
@@ -688,6 +750,7 @@ void C843::RunProfile(vector<string> vXYlist, vector<string> vPhilist,int vXYPro
 		C843_GcsCommandset(BoardHandle,"UPA C 0");
 		//TRACE("%d\n",C843_GetError(BoardHandle));
 		C843_GcsCommandset(BoardHandle,"UPR 1 A 0 2 B 0 3 C 0");	//send the run command
+		CheckPositions();
 		int error = C843_GetError(BoardHandle);
 		if (error == -1064)
 			{
@@ -696,6 +759,7 @@ void C843::RunProfile(vector<string> vXYlist, vector<string> vPhilist,int vXYPro
 			MoveToStart(vProfileStartX+0.1,vProfileStartY+0.1,vProfileStartPhi+0.1,1);
 			MoveToStart(vProfileStartX,vProfileStartY,vProfileStartPhi,1);
 			C843_GcsCommandset(BoardHandle,"UPR 1 A 0 2 B 0 3 C 0");	//send the run command
+			CheckPositions();
 			}
 		//TRACE("\n Start X:%d  Start Y:%d  Start Phi:%d",C843::vProfileStartX,C843::vProfileStartY,C843::vProfileStartPhi);
 		//_CrtDumpMemoryLeaks();
@@ -1050,6 +1114,7 @@ double C843::ExtractStartPosition(vector<string> AxisData)
 
 	return startpos;
 	}
+
 string C843::FixProfileSize(string CommandString)
 	{
 	string FixedString;
@@ -1059,7 +1124,7 @@ string C843::FixProfileSize(string CommandString)
 	stringstream ss(CommandString);
 	stringstream tss;
 
-	while (ss>>temp)			//tokenish the commandstring splitting on whitespace
+	while (ss>>temp)			//tokenise the commandstring splitting on whitespace
 		{
 		tokens.push_back(temp);
 		cout<<temp<<endl;

@@ -109,8 +109,9 @@
 #define ID_BUTTONCENTRE                 32803
 #define ID_SHUTTERBUTTON                32807
 #define ID_LOCATE_CAM_SOURCE            32808
-#define ID_BUTTON32809                  32809
 #define ID_HOME                         32809
+#define ID_BUTTON32812                  32812
+#define ID_TDIFIX                       32812
 #define ID_INDICATOR_PROJ               61447
 #define ID_INDICATOR_TEMP               61448
 #define ID_INDICATOR_CURSOR             61449
@@ -127,7 +128,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        148
-#define _APS_NEXT_COMMAND_VALUE         32812
+#define _APS_NEXT_COMMAND_VALUE         32813
 #define _APS_NEXT_CONTROL_VALUE         1079
 #define _APS_NEXT_SYMED_VALUE           103
 #endif
