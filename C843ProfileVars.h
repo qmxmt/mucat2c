@@ -14,7 +14,7 @@
 	int board = 1;			// number of used Board
 
 	//char* szStages[] = { "M-531.PD","M-531.DG","M-061.PD","M-531.PD"}; // determine stages on axes
-	char* szStages[] = { "M-531.PD","M-531.DG","6447-9-100","M-531.PD"}; // determine stages on axes
+	char* szStages[] = { "M-531.PD","M-531.PD","6447-9-100","M-531.PD"}; // determine stages on axes
 	
 	BOOL bShowDialog = TRUE;// if you don't want to edit settings with the dialog, set FALSE
 
